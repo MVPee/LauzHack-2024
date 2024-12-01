@@ -3,7 +3,8 @@ import re
 
 
 #df = pd.read_csv('./data/train/external_parties_train.csv')
-df = pd.read_csv('./data/test/external_parties_test.csv')
+df = pd.read_csv('./data/test/external_parties_test_corrected.csv')
+df = df.fillna('')
 # transaction_reference_id,party_role,party_info_unstructured,parsed_name,parsed_address_street_name,parsed_address_street_number,parsed_address_unit,parsed_address_postal_code,parsed_address_city,parsed_address_state,parsed_address_country,party_iban,party_phone,external_id
 
 class Person:
@@ -31,6 +32,9 @@ class Person:
 
     def __str__(self):
         return f"Person {self.id}: {self.namesVectors}, {self.addressesVectors}, {self.IBANS}, {self.phones}"
+    
+    def count(self):
+        return len(self.transactions) + len(self.IBANS) + len(self.phones)
 
 
 ibans = {}
@@ -61,20 +65,31 @@ for index, row in df.iterrows():
         if phone_person != iban_person:
             #phone_person.namesVectors += iban_person.namesVectors
             #phone_person.addressesVectors += iban_person.addressesVectors
-            """ phone_person.IBANS.update(iban_person.IBANS)
-            phone_person.phones.update(iban_person.phones)
-            phone_person.transactions.update(iban_person.transactions)
-            for iban in iban_person.IBANS:
-                ibans[iban] = phone_person
-            for phone in iban_person.phones:
-                phones[phone] = phone_person
-            Person.total -= 1
-            del iban_person """
-            iban_person.addData(row)
+            if phone_person.count() > iban_person.count():
+                phone_person.IBANS.update(iban_person.IBANS)
+                phone_person.phones.update(iban_person.phones)
+                phone_person.transactions.update(iban_person.transactions)
+                for iban in iban_person.IBANS:
+                    ibans[iban] = phone_person
+                for phone in iban_person.phones:
+                    phones[phone] = phone_person
+                Person.total -= 1
+                del iban_person
+            else:
+                iban_person.IBANS.update(phone_person.IBANS)
+                iban_person.phones.update(phone_person.phones)
+                iban_person.transactions.update(phone_person.transactions)
+                for iban in phone_person.IBANS:
+                    ibans[iban] = iban_person
+                for phone in phone_person.phones:
+                    phones[phone] = iban_person
+                Person.total -= 1
+                del phone_person
+            """ iban_person.addData(row)
             if row['party_phone']:
                 phones[row['party_phone']] = iban_person
             if row['party_iban']:
-                ibans[row['party_iban']] = iban_person
+                ibans[row['party_iban']] = iban_person """
         else:
             phone_person.addData(row)
             if row['party_iban']:
@@ -100,16 +115,17 @@ for person in phones.values():
 for person in ibans.values():
     persons.add(person)
 
-output = pd.DataFrame(columns=['transaction_reference_id', 'external_id'])
+print("Persons:", len(persons))
+print("Diff:", len(persons) - Person.total)
+
+output = []
 df_copy = df.copy()
 for person in persons:
     if len(person.transactions) > 1:
         for transaction in person.transactions:
-            #output.append([transaction, person.id])
-            output = output.append({'transaction_reference_id': transaction, 'external_id': person.id}, ignore_index=True)
-            df_copy = df_copy[df_copy['transaction_reference_id'] != transaction]
+            output.append([transaction, person.id])
+            #output = output.append({'transaction_reference_id': transaction, 'external_id': person.id}, ignore_index=True)
+            #df_copy = df_copy[df_copy['transaction_reference_id'] != transaction]
 
-print("Orphans:", df_copy.shape[0])
-
-
-output.to_csv('./output/persons_associations.csv', index=False)
+output = pd.DataFrame(output, columns=['transaction_reference_id', 'external_id'])
+output.to_csv('./outputs/persons_associations_corrected .csv', index=False)
