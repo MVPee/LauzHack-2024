@@ -32,16 +32,6 @@ class Person:
     def __str__(self):
         return f"Person {self.id}: {self.namesVectors}, {self.addressesVectors}, {self.IBANS}, {self.phones}"
 
-def normalize_phone(number):
-    number = re.sub(r'[^0-9+]', '', str(number))
-    if number.startswith('+'):
-        #change + to 00
-        number = '00' + number[1:]
-    #remove the + leftovers
-    number = re.sub(r'[^0-9]', '', number)
-    return number
-
-df['party_phone'] = df['party_phone'].apply(normalize_phone)
 
 ibans = {}
 phones = {}
@@ -71,7 +61,7 @@ for index, row in df.iterrows():
         if phone_person != iban_person:
             #phone_person.namesVectors += iban_person.namesVectors
             #phone_person.addressesVectors += iban_person.addressesVectors
-            phone_person.IBANS.update(iban_person.IBANS)
+            """ phone_person.IBANS.update(iban_person.IBANS)
             phone_person.phones.update(iban_person.phones)
             phone_person.transactions.update(iban_person.transactions)
             for iban in iban_person.IBANS:
@@ -79,7 +69,12 @@ for index, row in df.iterrows():
             for phone in iban_person.phones:
                 phones[phone] = phone_person
             Person.total -= 1
-            del iban_person
+            del iban_person """
+            iban_person.addData(row)
+            if row['party_phone']:
+                phones[row['party_phone']] = iban_person
+            if row['party_iban']:
+                ibans[row['party_iban']] = iban_person
         else:
             phone_person.addData(row)
             if row['party_iban']:
