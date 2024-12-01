@@ -100,10 +100,16 @@ for person in phones.values():
 for person in ibans.values():
     persons.add(person)
 
-output = []
+output = pd.DataFrame(columns=['transaction_reference_id', 'external_id'])
+df_copy = df.copy()
 for person in persons:
-    for transaction in person.transactions:
-        output.append([transaction, person.id])
+    if len(person.transactions) > 1:
+        for transaction in person.transactions:
+            #output.append([transaction, person.id])
+            output = output.append({'transaction_reference_id': transaction, 'external_id': person.id}, ignore_index=True)
+            df_copy = df_copy[df_copy['transaction_reference_id'] != transaction]
 
-df_output = pd.DataFrame(output, columns=['transaction_reference_id', 'external_id'])
-df_output.to_csv('./data/train/persons_association_2.csv', index=False)
+print("Orphans:", df_copy.shape[0])
+
+
+output.to_csv('./output/persons_associations.csv', index=False)

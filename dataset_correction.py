@@ -2,12 +2,9 @@ import pandas as pd
 from postal.parser import parse_address
 import re
 
-
-df = pd.read_csv('./data/train/external_parties_train.csv')
+if __name__ == '__main__':
+    df = pd.read_csv('./data/train/external_parties_train.csv')
 # transaction_reference_id,party_role,party_info_unstructured,parsed_name,parsed_address_street_name,parsed_address_street_number,parsed_address_unit,parsed_address_postal_code,parsed_address_city,parsed_address_state,parsed_address_country,party_iban,party_phone,external_id
-print(parse_address('123 Main St, Apt 4, Springfield, IL 62701, USA'))
-# [('123', 'house_number'), ('main st', 'road'), ('apt 4', 'unit'), ('springfield', 'city'), ('il', 'state'), ('62701', 'postcode'), ('usa', 'country')]
-#input("Press Enter to continue...")
 def normalize_address(row):
     """
     Normalize an address by parsing and reformatting its components.
@@ -32,7 +29,7 @@ def normalize_address(row):
 
     return row
 
-df = df.apply(normalize_address, axis=1)
+
 
 def normalize_phone(number):
     number = re.sub(r'[^0-9+]', '', str(number))
@@ -43,6 +40,23 @@ def normalize_phone(number):
     number = re.sub(r'[^0-9]', '', number)
     return number
 
-df['party_phone'] = df['party_phone'].apply(normalize_phone)
 
-df.to_csv('./data/train/external_parties_train_corrected.csv', index=False)
+def normalize_data(row):
+    """
+    Normalize the data in a row.
+    
+    Parameters:
+    - row (pd.Series): The row to normalize.
+    
+    Returns:
+    - pd.Series: The normalized row.
+    """
+    row = normalize_address(row)
+    row['party_phone'] = normalize_phone(row['party_phone'])
+    
+    return row
+
+if __name__ == '__main__':
+    df = df.apply(normalize_data, axis=1)
+
+    df.to_csv('./data/train/external_parties_train_corrected.csv', index=False)
